@@ -175,4 +175,8 @@ else
 fi
 
 cd ..
-rm -rf work
+rm -rf work || {
+  git -C work fsmonitor--daemon stop 2>/dev/null || true
+  sleep 1
+  rm -rf work
+}
