@@ -103,18 +103,26 @@ echo "$MERGE_RESULT"
 echo "checking git status"
 git status
 
+echo ""
+echo "========================================="
+echo "[DRY-RUN] Merge complete. Inspect the result in the 'work/' directory."
+echo "[DRY-RUN] Skipped all git push commands."
+echo "[DRY-RUN] Run 'rm -rf work' to clean up when done."
+echo "========================================="
+
 if [[ $MERGE_EXIT -eq 0 ]]; then
   if [[ $MERGE_RESULT != *"Already up to date."* ]]; then
-    git diff --cached --quiet 2>/dev/null || git commit -m "Merged upstream"
-    git push ${PUSH_ARGS} origin ${DOWNSTREAM_BRANCH} || exit $?
+    echo "[DRY-RUN] Merge succeeded with changes. Would have pushed to origin/${DOWNSTREAM_BRANCH}."
     if [[ -n ${PUSH_TAGS} ]]; then
-      git push origin ${PUSH_ARGS} ${PUSH_TAGS}
+      echo "[DRY-RUN] Would have pushed tags: ${PUSH_TAGS}"
     fi
+  else
+    echo "[DRY-RUN] Already up to date. Nothing to push."
   fi
 else
   CONFLICTED_FILES=$(git diff --name-only --diff-filter=U)
   if [[ -z "$CONFLICTED_FILES" ]]; then
-    echo "Merge failed with no conflicted files to resolve"
+    echo "[DRY-RUN] Merge failed with no conflicted files to resolve"
     exit 1
   fi
 
@@ -146,33 +154,21 @@ else
     done
 
     if [[ "$is_excluded" == true ]]; then
-      echo "Auto-resolving excluded file conflict: $conflict_file"
-      if git checkout --ours -- "$conflict_file" 2>/dev/null; then
-        git add "$conflict_file"
-      elif git rm -f "$conflict_file" 2>/dev/null; then
-        :
-      else
-        echo "Failed to resolve conflict for excluded file: $conflict_file"
-        HAS_NON_EXCLUDED_CONFLICT=true
-      fi
+      echo "[DRY-RUN] Would auto-resolve excluded file conflict: $conflict_file"
     else
-      echo "Non-excluded file has conflict: $conflict_file"
+      echo "[DRY-RUN] Non-excluded file has conflict: $conflict_file"
       HAS_NON_EXCLUDED_CONFLICT=true
     fi
   done <<< "$CONFLICTED_FILES"
 
   if [[ "$HAS_NON_EXCLUDED_CONFLICT" == true ]]; then
-    echo "Merge conflicts exist in non-excluded files, failing"
+    echo "[DRY-RUN] Merge conflicts exist in non-excluded files, would fail"
     exit 1
   fi
 
-  echo "All conflicts were in excluded files and have been auto-resolved"
-  git commit -m "Merged upstream" || { echo "Commit failed after conflict resolution" && exit 1 ; }
-  git push ${PUSH_ARGS} origin ${DOWNSTREAM_BRANCH} || exit $?
+  echo "[DRY-RUN] All conflicts are in excluded files and would be auto-resolved"
+  echo "[DRY-RUN] Would have pushed to origin/${DOWNSTREAM_BRANCH}."
   if [[ -n ${PUSH_TAGS} ]]; then
-    git push origin ${PUSH_ARGS} ${PUSH_TAGS}
+    echo "[DRY-RUN] Would have pushed tags: ${PUSH_TAGS}"
   fi
 fi
-
-cd ..
-rm -rf work

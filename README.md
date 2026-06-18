@@ -74,8 +74,7 @@ Note: If `SPAWN_LOGS` is set to `true`, this action will create a `sync-upstream
 
 ## Development
 
-In [`action.yml`](https://github.com/dabreadman/sync-upstream-repo/blob/master/action.yml), we define `inputs`.  
-We then pass these arguments into [`Dockerfile`](https://github.com/dabreadman/sync-upstream-repo/blob/master/Dockerfile), which then passed onto [`entrypoint.sh`](https://github.com/dabreadman/sync-upstream-repo/blob/master/entrypoint.sh).
+In [`action.yml`](action.yml), we define `inputs` and pass them as positional arguments to [`entrypoint.sh`](entrypoint.sh) via a composite action step.
 
 `entrypoint.sh` does the heavy-lifting,
 
@@ -83,4 +82,6 @@ We then pass these arguments into [`Dockerfile`](https://github.com/dabreadman/s
 - Set up git config.
 - Clone downstream repository.
 - Fetch upstream repository.
-- Attempt merge if behind, and push to downstream.
+- Attempt merge if behind, auto-resolve conflicts in excluded files, and push to downstream.
+
+A [`entrypoint-dryrun.sh`](entrypoint-dryrun.sh) variant is available for local testing — it performs the merge but skips all push operations and preserves the working directory for inspection.
