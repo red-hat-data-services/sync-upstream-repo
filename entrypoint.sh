@@ -122,24 +122,14 @@ else
   while IFS= read -r conflict_file; do
     is_excluded=false
     for exclusion in "${exclusions[@]}"; do
-      if [[ "$exclusion" == */ ]]; then
-        if [[ "$conflict_file" == "$exclusion"* ]]; then
-          is_excluded=true
-          break
-        fi
-      elif [[ "$exclusion" == */\*\* ]]; then
-        folder="${exclusion%\*\*}"
-        if [[ "$conflict_file" == "$folder"* ]]; then
-          is_excluded=true
-          break
-        fi
-      elif [[ "$exclusion" == */\* ]]; then
-        folder="${exclusion%\*}"
-        if [[ "$conflict_file" == "$folder"* ]]; then
-          is_excluded=true
-          break
-        fi
-      elif [[ "$conflict_file" == "$exclusion" ]]; then
+      glob_pattern="$exclusion"
+      # Normalize bare directory prefix ("vendor/") to "vendor/*" for matching
+      if [[ "$glob_pattern" == */ ]]; then
+        glob_pattern="${glob_pattern}*"
+      fi
+      # Unquoted $glob_pattern enables bash glob matching in [[ ]], supporting
+      # patterns like .tekton/*.yaml, build/**, .tekton/*, and literal paths
+      if [[ "$conflict_file" == $glob_pattern ]]; then
         is_excluded=true
         break
       fi
