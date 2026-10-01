@@ -34,20 +34,28 @@ fi
 
 echo "UPSTREAM_REPO=$UPSTREAM_REPO"
 
-if [[ $DOWNSTREAM_REPO == "GITHUB_REPOSITORY" ]]
-then
-  git clone "https://github.com/${GITHUB_REPOSITORY}.git" --branch ${DOWNSTREAM_BRANCH} work
-  cd work || { echo "Missing work dir" && exit 2 ; }
-  set +x
-  git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-  set -x
-else
-  git clone "$DOWNSTREAM_REPO" --branch ${DOWNSTREAM_BRANCH} work
-  cd work || { echo "Missing work dir" && exit 2 ; }
-  set +x
-  git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${DOWNSTREAM_REPO/https:\/\/github.com\//}"
-  set -x
+if [[ $DOWNSTREAM_REPO == "GITHUB_REPOSITORY" ]]; then
+  DOWNSTREAM_REPO="https://github.com/${GITHUB_REPOSITORY}.git"
 fi
+
+github_git() {
+  set +x
+  GITHUB_TOKEN="$GITHUB_TOKEN" git -c credential.helper= \
+    -c "credential.https://github.com.helper=!f() { printf 'username=x-access-token\npassword=%s\n' \"\$GITHUB_TOKEN\"; }; f" \
+    "$@"
+  local result=$?
+  set -x
+  return "$result"
+}
+
+if [[ $DOWNSTREAM_REPO == https://github.com/* ]]; then
+  push_git=github_git
+  github_git clone "$DOWNSTREAM_REPO" --branch "$DOWNSTREAM_BRANCH" work
+else
+  push_git=git
+  git clone "$DOWNSTREAM_REPO" --branch "$DOWNSTREAM_BRANCH" work
+fi
+cd work || { echo "Missing work dir" && exit 2 ; }
 
 
 
@@ -106,9 +114,9 @@ git status
 if [[ $MERGE_EXIT -eq 0 ]]; then
   if [[ $MERGE_RESULT != *"Already up to date."* ]]; then
     git diff --cached --quiet 2>/dev/null || git commit -m "Merged upstream"
-    git push ${PUSH_ARGS} origin ${DOWNSTREAM_BRANCH} || exit $?
+    "$push_git" push ${PUSH_ARGS} origin ${DOWNSTREAM_BRANCH} || exit $?
     if [[ -n ${PUSH_TAGS} ]]; then
-      git push origin ${PUSH_ARGS} ${PUSH_TAGS}
+      "$push_git" push origin ${PUSH_ARGS} ${PUSH_TAGS}
     fi
   fi
 else
@@ -158,9 +166,9 @@ else
 
   echo "All conflicts were in excluded files and have been auto-resolved"
   git commit -m "Merged upstream" || { echo "Commit failed after conflict resolution" && exit 1 ; }
-  git push ${PUSH_ARGS} origin ${DOWNSTREAM_BRANCH} || exit $?
+  "$push_git" push ${PUSH_ARGS} origin ${DOWNSTREAM_BRANCH} || exit $?
   if [[ -n ${PUSH_TAGS} ]]; then
-    git push origin ${PUSH_ARGS} ${PUSH_TAGS}
+    "$push_git" push origin ${PUSH_ARGS} ${PUSH_TAGS}
   fi
 fi
 

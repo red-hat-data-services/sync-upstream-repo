@@ -81,6 +81,7 @@ In [`action.yml`](action.yml), we define `inputs` and pass them as positional ar
 - Set up variables.
 - Set up git config.
 - Clone downstream repository.
+- For GitHub HTTPS downstream repositories, use the `token` input for authenticated clones and pushes without saving it in the checkout's Git remote configuration. Public repositories can still clone anonymously. The token must have access to the downstream repository.
 - Fetch upstream repository.
 - Attempt merge if behind, auto-resolve conflicts in excluded files, and push to downstream.
 
