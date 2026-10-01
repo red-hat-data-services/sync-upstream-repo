@@ -34,20 +34,20 @@ fi
 
 echo "UPSTREAM_REPO=$UPSTREAM_REPO"
 
-if [[ $DOWNSTREAM_REPO == "GITHUB_REPOSITORY" ]]
-then
-  git clone "https://github.com/${GITHUB_REPOSITORY}.git" --branch ${DOWNSTREAM_BRANCH} work
-  cd work || { echo "Missing work dir" && exit 2 ; }
+if [[ $DOWNSTREAM_REPO == "GITHUB_REPOSITORY" ]]; then
+  DOWNSTREAM_REPO="https://github.com/${GITHUB_REPOSITORY}.git"
+fi
+
+if [[ $DOWNSTREAM_REPO == https://github.com/* ]]; then
   set +x
-  git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+  GITHUB_TOKEN="$GITHUB_TOKEN" git -c credential.helper= \
+    -c "credential.https://github.com.helper=!f() { printf 'username=x-access-token\npassword=%s\n' \"\$GITHUB_TOKEN\"; }; f" \
+    clone "$DOWNSTREAM_REPO" --branch "$DOWNSTREAM_BRANCH" work
   set -x
 else
-  git clone "$DOWNSTREAM_REPO" --branch ${DOWNSTREAM_BRANCH} work
-  cd work || { echo "Missing work dir" && exit 2 ; }
-  set +x
-  git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${DOWNSTREAM_REPO/https:\/\/github.com\//}"
-  set -x
+  git clone "$DOWNSTREAM_REPO" --branch "$DOWNSTREAM_BRANCH" work
 fi
+cd work || { echo "Missing work dir" && exit 2 ; }
 
 
 
